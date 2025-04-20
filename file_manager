@@ -1,0 +1,121 @@
+<?php 
+// Configuration 
+$upload_dir = 'uploads/'; 
+$allowed_extensions = array('pdf', 'docx', 'doc', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif'); 
+$email_address = 'karryy2904@gmail.com'; 
+ 
+// Check if the upload directory exists, if not create it 
+if (!is_dir($upload_dir)) { 
+    mkdir($upload_dir, 0777, true); 
+} 
+ 
+// Function to upload file 
+function upload_file($file) { 
+    global $upload_dir, $allowed_extensions; 
+    $file_name = $file['name']; 
+    $file_tmp = $file['tmp_name']; 
+    $file_size = $file['size']; 
+    $file_ext = pathinfo($file_name, PATHINFO_EXTENSION); 
+ 
+    // Check if the file extension is allowed 
+    if (!in_array($file_ext, $allowed_extensions)) { 
+        return 'File type not allowed'; 
+    } 
+ 
+    // Check if the file size is within the limit 
+    if ($file_size > 1024 * 1024 * 5) { 
+        return 'File size exceeds the limit'; 
+    } 
+ 
+    // Upload the file 
+    $new_file_name = date('Y-m-d-H-i-s') . '_' . $file_name; 
+    if (move_uploaded_file($file_tmp, $upload_dir . $new_file_name)) { 
+        return $new_file_name; 
+    } else { 
+        return 'Failed to upload file'; 
+    } 
+} 
+ 
+// Function to send email confirmation 
+ 
+use PHPMailer\PHPMailer\PHPMailer; 
+use PHPMailer\PHPMailer\Exception; 
+// Load Composer's autoloader 
+require 'vendor/autoload.php'; // Adjust this path if you downloaded PHPMailer manually 
+$mail = new PHPMailer(true); // Create a new PHPMailer instance 
+try { 
+ // Server settings 
+ $mail->isSMTP(); // Set mailer to use SMTP 
+ $mail->Host = 'smtp.gmail.com'; // Specify main and backup SMTP servers 
+ $mail->SMTPAuth = true; // Enable SMTP authentication 
+ $mail->Username = 'karryy2904@gmail.com'; // Your Gmail address 
+ $mail->Password = 'qwjetiytyuwcdakx'; // Your app password (if using 2FA) 
+ $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; // Enable TLS encryption 
+$mail->Port = 587; // TCP port to connect to 
+ // Recipients 
+ $mail->setFrom('karryy2904@gmail.com', 'karishma'); // Sender's email and name 
+ $mail->addAddress('karryy2904@gmail.com', 'karry'); // Add a recipient 
+ // Content 
+ $mail->isHTML(true); // Set email format to HTML 
+ $mail->Subject = 'File uploaded'; // Subject of the email 
+ $mail->Body = 'This is a <b>confirmation email</b> that file has been uploaded.'; // HTML Body 
+ $mail->AltBody = 'This is a confirmation email that file has been uploaded.'; // Plain text Body 
+ $mail->send(); // Send the email 
+ echo 'Email has been sent'; // Success message 
+} catch (Exception $e) { 
+ echo "Email could not be sent. Mailer Error: {$mail->ErrorInfo}"; // Error message 
+} 
+ 
+// Handle file upload 
+if (isset($_FILES['file'])) { 
+    $file_name = upload_file($_FILES['file']); 
+    if ($file_name) { 
+        send_email_confirmation($file_name); 
+        header('Location: index.php?success=1'); 
+        exit; 
+    } else { 
+        header('Location: index.php?error=1'); 
+        exit; 
+    } 
+} 
+ 
+// Display uploaded files 
+$files = scandir($upload_dir); 
+$uploaded_files = array(); 
+foreach ($files as $file) { 
+    if ($file != '.' && $file != '..') { 
+        $uploaded_files[] = $file; 
+    } 
+} 
+ 
+// Display error or success message 
+if (isset($_GET['error'])) { 
+    echo '<p style="color: red;">Error uploading file.</p>'; 
+} elseif (isset($_GET['success'])) { 
+    echo '<p style="color: green;">File uploaded successfully.</p>'; 
+} 
+?> 
+ 
+<!DOCTYPE html> 
+<html> 
+<head> 
+    <title>File Upload</title> 
+</head> 
+<body> 
+    <h1>File Upload</h1> 
+    <form action="" method="post" enctype="multipart/form-data"> 
+        <input type="file" name="file"> 
+        <button type="submit">Upload File</button> 
+    </form> 
+    <h2>Uploaded Files</h2> 
+    <ul> 
+        <?php foreach ($uploaded_files as $file) { ?> 
+            <li> 
+                <a href="<?php echo $upload_dir . $file; ?>" download="<?php echo $file; ?>"><?php echo 
+$file; ?></a> 
+                (Uploaded on <?php echo date('Y-m-d H:i:s', filemtime($upload_dir . $file)); ?>) 
+            </li> 
+        <?php } ?> 
+    </ul> 
+</body> 
+</html>
